@@ -1,12 +1,12 @@
-# compliance
+# healthcheck
 
-`compliance` is a command-line tool for the [Compliance](https://compliance.mvdm.io) REST API. It is built for
-people who script Compliance from a terminal, and for their Agents (Claude Code, Codex, Gemini CLI, and others)
+`healthcheck` is a command-line tool for the [HealthCheck](https://healthcheck.mvdm.io) REST API. It is built for
+people who script HealthCheck from a terminal, and for their Agents (Claude Code, Codex, Gemini CLI, and others)
 that run shell commands. Every command prints JSON, and the exit code says what happened.
 
-For the full setup steps, read the [CLI guide](https://compliance.mvdm.io/agents/cli).
+For the full setup steps, read the [CLI guide](https://healthcheck.mvdm.io/agents/cli).
 
-The CLI talks to the Compliance REST API only. It collects no usage data and sends none: no telemetry, no
+The CLI talks to the HealthCheck REST API only. It collects no usage data and sends none: no telemetry, no
 crash reports, no update checks.
 
 ## Install
@@ -14,25 +14,25 @@ crash reports, no update checks.
 Linux and macOS:
 
 ```sh
-curl -LsSf https://compliance.mvdm.io/cli/install.sh | sh
+curl -LsSf https://healthcheck.mvdm.io/cli/install.sh | sh
 ```
 
 Windows (PowerShell):
 
 ```powershell
-powershell -ExecutionPolicy ByPass -c "irm https://compliance.mvdm.io/cli/install.ps1 | iex"
+powershell -ExecutionPolicy ByPass -c "irm https://healthcheck.mvdm.io/cli/install.ps1 | iex"
 ```
 
-The installer puts the `compliance` binary in `~/.cargo/bin` (or `$CARGO_HOME/bin`) and tells you if that folder
+The installer puts the `healthcheck` binary in `~/.cargo/bin` (or `$CARGO_HOME/bin`) and tells you if that folder
 is not on your `PATH`. Builds exist for Linux (x64 and arm64, static), macOS (arm64 and x64), and Windows (x64).
 
-Run the install line again to upgrade: the CLI never updates itself. `compliance --version` shows the build you
+Run the install line again to upgrade: the CLI never updates itself. `healthcheck --version` shows the build you
 run.
 
 ## For Agents
 
 ```sh
-compliance skill
+healthcheck skill
 ```
 
 `skill` prints one Markdown skill file that teaches an Agent when and how to use the CLI: signing in, command
@@ -42,7 +42,7 @@ Give it to your Agent as a skill, or let the Agent run it. The same file is [`SK
 ## Sign in
 
 ```sh
-compliance login
+healthcheck login
 ```
 
 `login` opens your browser at Auth. Sign in there and allow the CLI; the terminal then prints
@@ -53,20 +53,20 @@ On a machine without a browser, such as a server over SSH, use the device code. 
 itself when it cannot open a browser.
 
 ```sh
-compliance login --device
+healthcheck login --device
 ```
 
 stderr then holds `{"status":"device_code","verificationUriComplete":…,"verificationUri":…,"userCode":…,"expiresIn":…}`.
 Open the link on any device and sign in there. The CLI waits until you have.
 
-The CLI finds Auth by itself, through the host's Protected Resource Metadata. You only ever set the Compliance
+The CLI finds Auth by itself, through the host's Protected Resource Metadata. You only ever set the HealthCheck
 host.
 
 A sign-in is an Agent connection: it acts as you, in one of your Accounts at a time. The CLI renews its access
-token by itself. When the connection has ended, commands fail with `not-signed-in`; run `compliance login` again.
+token by itself. When the connection has ended, commands fail with `not-signed-in`; run `healthcheck login` again.
 
 ```sh
-compliance logout
+healthcheck logout
 ```
 
 `logout` ends the Agent connection at Auth, so it stops working everywhere, and then forgets the sign-in. If Auth
@@ -74,43 +74,43 @@ cannot be reached, the sign-in stays, and you can run `logout` again.
 
 ### Stored sign-in
 
-The sign-in is stored in `credentials.json`, in the `compliance` folder of your config folder:
+The sign-in is stored in `credentials.json`, in the `healthcheck` folder of your config folder:
 
 | OS | Folder |
 | -- | ------ |
-| Linux | `$XDG_CONFIG_HOME/compliance` or `~/.config/compliance` |
-| macOS | `~/Library/Application Support/compliance` |
-| Windows | `%APPDATA%\compliance` |
+| Linux | `$XDG_CONFIG_HOME/healthcheck` or `~/.config/healthcheck` |
+| macOS | `~/Library/Application Support/healthcheck` |
+| Windows | `%APPDATA%\healthcheck` |
 
-`COMPLIANCE_CONFIG_DIR` sets another folder. The file holds one sign-in per host, so a sign-in on another host
+`HEALTHCHECK_CONFIG_DIR` sets another folder. The file holds one sign-in per host, so a sign-in on another host
 sits beside it. On Linux and macOS, only you can read it (mode 0600).
 
 ### Personal token
 
-For unattended jobs, such as CI, set `COMPLIANCE_TOKEN` to a Personal token. You create Personal tokens on the API
-& Agent Access page of your account; the CLI never creates them. `COMPLIANCE_TOKEN` always wins over the stored
+For unattended jobs, such as CI, set `HEALTHCHECK_TOKEN` to a Personal token. You create Personal tokens on the API
+& Agent Access page of your account; the CLI never creates them. `HEALTHCHECK_TOKEN` always wins over the stored
 sign-in, and `logout` leaves it alone.
 
 ```sh
-export COMPLIANCE_TOKEN=...
-compliance api GET /api/v1/risks
+export HEALTHCHECK_TOKEN=...
+healthcheck api GET /api/v1/risks
 ```
 
 ## Status and Accounts
 
 ```sh
-compliance status
+healthcheck status
 ```
 
 `status` shows who you are and where commands land:
 `{"host":…,"signedIn":…,"credential":{"kind":…,"source":…},"user":…,"account":…}`. The credential
-kind is `personal-token` or `agent-connection`, and the source is `COMPLIANCE_TOKEN` or `stored sign-in`. `user`
+kind is `personal-token` or `agent-connection`, and the source is `HEALTHCHECK_TOKEN` or `stored sign-in`. `user`
 comes from the sign-in, so it is `null` with a Personal token: the API has no call that names the User. Without
 a credential it prints `"signedIn": false` and exits 0.
 
 ```sh
-compliance accounts list
-compliance accounts switch 42
+healthcheck accounts list
+healthcheck accounts switch 42
 ```
 
 `accounts list` lists your Accounts, the current one marked `"current": true`. `accounts switch <id>` moves the
@@ -122,15 +122,15 @@ Every REST operation is a command. The CLI builds these commands when it runs, f
 at `/openapi/v1.json`, so a new operation shows up without a new CLI release.
 
 ```sh
-compliance risks list --filter "status eq 'Open'" --top 5
-compliance risks accept 3f2c9a
-compliance risks create --title Flood --likelihood 3
-compliance evidence download 8d1e --out scan.pdf
+healthcheck risks list --filter "status eq 'Open'" --top 5
+healthcheck risks accept 3f2c9a
+healthcheck risks create --title Flood --likelihood 3
+healthcheck evidence download 8d1e --out scan.pdf
 ```
 
-- **Names.** An operation's `operationId` `<group>.<action>` becomes `compliance <group> <action>`, both in
-  kebab-case. So `risks.accept` is `compliance risks accept`. The group comes from the `operationId`, not from the
-  tag: `compliance <group> --help` lists the tags its actions carry.
+- **Names.** An operation's `operationId` `<group>.<action>` becomes `healthcheck <group> <action>`, both in
+  kebab-case. So `risks.accept` is `healthcheck risks accept`. The group comes from the `operationId`, not from the
+  tag: `healthcheck <group> --help` lists the tags its actions carry.
 - **Arguments.** Path parameters are positional arguments, in path order. Query parameters are options, with the
   OData `$` dropped: `--filter`, `--select`, `--orderby`, `--expand`, `--top`, `--skip`. The top-level fields of a
   JSON body are options too, kebab-cased (`collectedAt` is `--collected-at`) and typed from the schema: numbers
@@ -142,8 +142,8 @@ compliance evidence download 8d1e --out scan.pdf
   body field `out` is `--field-out`), and the option's help says so.
 - **Downloads.** An operation that answers a file, not JSON, needs `--out <path>`. Without it, the command is a
   usage mistake and sends nothing. Only these operations have `--out`.
-- **Help.** `compliance --help` lists the hand-written commands and the groups. `compliance <group> --help` lists
-  its actions, and `compliance <group> <action> --help` shows the operation's summary, its description, and every
+- **Help.** `healthcheck --help` lists the hand-written commands and the groups. `healthcheck <group> --help` lists
+  its actions, and `healthcheck <group> <action> --help` shows the operation's summary, its description, and every
   argument with its type.
 
 The hand-written commands (`login`, `logout`, `status`, `accounts list`, `accounts switch`, `chat send`, `api`,
@@ -158,8 +158,8 @@ sends the file first and then makes the call with the new upload id. `--file` an
 given together.
 
 ```sh
-compliance evidence create --file scan.pdf --title "Scan"
-compliance conversations send-message 12 --text "See these" --file a.pdf --file b.png
+healthcheck evidence create --file scan.pdf --title "Scan"
+healthcheck conversations send-message 12 --text "See these" --file a.pdf --file b.png
 ```
 
 - **Lists.** Where the operation takes a list of upload ids, such as `uploadIds`, `--file` repeats. Each file
@@ -176,15 +176,15 @@ compliance conversations send-message 12 --text "See these" --file a.pdf --file 
 
 ### The cached description
 
-The CLI keeps a copy of the description per host, in the `compliance` folder of your cache folder:
+The CLI keeps a copy of the description per host, in the `healthcheck` folder of your cache folder:
 
 | OS | Folder |
 | -- | ------ |
-| Linux | `$XDG_CACHE_HOME/compliance` or `~/.cache/compliance` |
-| macOS | `~/Library/Caches/compliance` |
-| Windows | `%LOCALAPPDATA%\compliance` |
+| Linux | `$XDG_CACHE_HOME/healthcheck` or `~/.cache/healthcheck` |
+| macOS | `~/Library/Caches/healthcheck` |
+| Windows | `%LOCALAPPDATA%\healthcheck` |
 
-`COMPLIANCE_CACHE_DIR` sets another folder. A copy younger than one hour is used as it is. An older one is
+`HEALTHCHECK_CACHE_DIR` sets another folder. A copy younger than one hour is used as it is. An older one is
 fetched again; if that fails, the old copy is used. With no copy and no answer from the host, a generated command
 fails with `network`.
 
@@ -194,7 +194,7 @@ fresh copy at once, even within the hour. If the command is still unknown, it is
 ## Talk to our Assistant
 
 ```sh
-compliance chat send "Which risks are still open?"
+healthcheck chat send "Which risks are still open?"
 ```
 
 `chat send "<text>"` sends one message to our Assistant, as a person does in the Assistant panel, and waits
@@ -212,29 +212,29 @@ until its turn ends. Without `--conversation <id>`, it starts a new conversation
 - `lastError` says why the turn stopped early, when it did.
 - `queued` is true when your message went into a shared conversation while another member's turn was running.
   Our Assistant answers it in the turn after that one, so `messages` may hold only that member's reply. Read the
-  answer later with `compliance conversations list-messages <conversationId> --after <seq> --wait 60`.
+  answer later with `healthcheck conversations list-messages <conversationId> --after <seq> --wait 60`.
 
 **Answer a question or proposal.** Our Assistant asks and proposes in the text of its messages. Answer with the
 next `chat send`, passing the printed `conversationId`:
 
 ```sh
-compliance chat send "Yes, go ahead." --conversation <conversationId>
+healthcheck chat send "Yes, go ahead." --conversation <conversationId>
 ```
 
 An empty Assistant allowance (402 `allowance-exhausted`) or a conversation that cannot take a message now (409)
 prints the ProblemDetails on stderr and exits 1. For everything else about conversations, such as listing them or
-stopping a turn, use the generated `compliance conversations …` commands.
+stopping a turn, use the generated `healthcheck conversations …` commands.
 
 ## Raw calls
 
-`compliance api <method> <path>` makes one call with your credential. The path is relative to the host, and a
+`healthcheck api <method> <path>` makes one call with your credential. The path is relative to the host, and a
 query string rides in it.
 
 ```sh
-compliance api GET '/api/v1/risks?$top=5'
-compliance api POST /api/v1/risks --body '{"title":"Flood"}'
-compliance api PATCH /api/v1/risks/r1 --body @risk.json
-compliance api GET /api/v1/reports/q3 --out q3.pdf
+healthcheck api GET '/api/v1/risks?$top=5'
+healthcheck api POST /api/v1/risks --body '{"title":"Flood"}'
+healthcheck api PATCH /api/v1/risks/r1 --body @risk.json
+healthcheck api GET /api/v1/reports/q3 --out q3.pdf
 ```
 
 - `--body <json|@file>` sends a JSON body, inline or read from a file.
@@ -265,10 +265,10 @@ person; the CLI never opens a browser for it.
 
 | Variable | Meaning |
 | -------- | ------- |
-| `COMPLIANCE_TOKEN` | A Personal token, sent as the bearer. Wins over the stored sign-in. |
-| `COMPLIANCE_URL` | The Compliance host. Defaults to `https://compliance.mvdm.io`. |
-| `COMPLIANCE_CONFIG_DIR` | The folder for the stored sign-in. |
-| `COMPLIANCE_CACHE_DIR` | The folder for the cached API description. |
+| `HEALTHCHECK_TOKEN` | A Personal token, sent as the bearer. Wins over the stored sign-in. |
+| `HEALTHCHECK_URL` | The HealthCheck host. Defaults to `https://healthcheck.mvdm.io`. |
+| `HEALTHCHECK_CONFIG_DIR` | The folder for the stored sign-in. |
+| `HEALTHCHECK_CACHE_DIR` | The folder for the cached API description. |
 
 ## Licence
 
