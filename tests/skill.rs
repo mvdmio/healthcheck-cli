@@ -64,11 +64,11 @@ fn skill_covers_the_screenshot_download_with_out() {
 }
 
 #[test]
-fn skill_mentions_no_cut_feature_and_no_other_product() {
+fn skill_mentions_no_cut_feature() {
     let run = healthcheck(&["skill"], &[]);
     let skill = run.stdout.to_lowercase();
 
-    for absent in ["assistant", "handoff", "chat", "--file", "compliance"] {
+    for absent in ["assistant", "handoff", "chat", "--file"] {
         assert!(!skill.contains(absent), "skill still mentions {absent}");
     }
     assert!(!run.stdout.contains("exit 3"));

@@ -551,8 +551,8 @@ fn no_generated_action_offers_file() {
         }
     }
 
-    // The fixture's eleven generated `projects` actions, and the hand-written ones beside them.
-    assert!(checked >= 11, "only {checked} actions were walked");
+    // The fixture's eleven generated `projects` actions, and the two `accounts` actions beside them.
+    assert_eq!(checked, 13, "{checked} actions were walked");
     assert!(host.api_requests().is_empty());
 }
 

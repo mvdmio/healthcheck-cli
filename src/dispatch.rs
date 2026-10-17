@@ -1,3 +1,5 @@
+//! Turns the arguments of a generated command into its request.
+
 use std::path::PathBuf;
 
 use clap::ArgMatches;
