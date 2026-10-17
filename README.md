@@ -36,7 +36,7 @@ healthcheck skill
 ```
 
 `skill` prints one Markdown skill file that teaches an Agent when and how to use the CLI: signing in, command
-names, exit codes, files, our Assistant, and Browser handoffs. It is the only command whose output is not JSON.
+names, exit codes, and file downloads. It is the only command whose output is not JSON.
 Give it to your Agent as a skill, or let the Agent run it. The same file is [`SKILL.md`](SKILL.md) in this repo.
 
 ## Sign in
@@ -93,7 +93,7 @@ sign-in, and `logout` leaves it alone.
 
 ```sh
 export HEALTHCHECK_TOKEN=...
-healthcheck api GET /api/v1/risks
+healthcheck api GET /api/v1/projects
 ```
 
 ## Status and Accounts
@@ -122,22 +122,23 @@ Every REST operation is a command. The CLI builds these commands when it runs, f
 at `/openapi/v1.json`, so a new operation shows up without a new CLI release.
 
 ```sh
-healthcheck risks list --filter "status eq 'Open'" --top 5
-healthcheck risks accept 3f2c9a
-healthcheck risks create --title Flood --likelihood 3
-healthcheck evidence download 8d1e --out scan.pdf
+healthcheck projects list
+healthcheck projects create --name "Web shop"
+healthcheck projects create-url-check 7 --name Home --url https://example.com
+healthcheck projects list-run-pages 7 12 40 --page 2 --page-size 50
+healthcheck projects download-run-page-screenshot 7 12 40 3 8d1e2f4a-1b2c-4d5e-8f60-718293a4b5c6 --out shot.png
 ```
 
 - **Names.** An operation's `operationId` `<group>.<action>` becomes `healthcheck <group> <action>`, both in
-  kebab-case. So `risks.accept` is `healthcheck risks accept`. The group comes from the `operationId`, not from the
-  tag: `healthcheck <group> --help` lists the tags its actions carry.
-- **Arguments.** Path parameters are positional arguments, in path order. Query parameters are options, with the
-  OData `$` dropped: `--filter`, `--select`, `--orderby`, `--expand`, `--top`, `--skip`. The top-level fields of a
-  JSON body are options too, kebab-cased (`collectedAt` is `--collected-at`) and typed from the schema: numbers
+  kebab-case. So `projects.start-smoke-test` is `healthcheck projects start-smoke-test`. The group comes from the
+  `operationId`, not from the tag: `healthcheck <group> --help` lists the tags its actions carry.
+- **Arguments.** Path parameters are positional arguments, in path order. Query parameters are options, kebab-cased
+  (`pageSize` is `--page-size`); lists page with `--page` and `--page-size`. The top-level fields of a
+  JSON body are options too, kebab-cased and typed from the schema: numbers
   are sent as numbers, `true`/`false` as booleans, a list option repeats, and an object takes JSON text.
 - **`--body <json|@file>`** sends a whole body. Field options win over the same keys in it. An operation that
   needs a body and gets none sends `{}`.
-- **Name clashes.** `--help`, `--body`, `--out`, and `--file` are always the CLI's own. After them, query
+- **Name clashes.** `--help`, `--body`, and `--out` are always the CLI's own. After them, query
   parameters take their names before body fields. A name already taken gets a `query-` or `field-` prefix (so a
   body field `out` is `--field-out`), and the option's help says so.
 - **Downloads.** An operation that answers a file, not JSON, needs `--out <path>`. Without it, the command is a
@@ -146,33 +147,10 @@ healthcheck evidence download 8d1e --out scan.pdf
   its actions, and `healthcheck <group> <action> --help` shows the operation's summary, its description, and every
   argument with its type.
 
-The hand-written commands (`login`, `logout`, `status`, `accounts list`, `accounts switch`, `chat send`, `api`,
+The hand-written commands (`login`, `logout`, `status`, `accounts list`, `accounts switch`, `api`,
 `skill`, and `--version`) never need the description, and win over a generated command of the same name. Other actions in the
-same group, such as a generated `accounts get`, stay reachable. A hand-written command without actions, such as `status`, hides a generated
+same group stay reachable. A hand-written command without actions, such as `status`, hides a generated
 group of the same name.
-
-### Files
-
-An operation that takes an upload id, such as `evidence create --upload-id`, also takes `--file <path>`. The CLI
-sends the file first and then makes the call with the new upload id. `--file` and the upload id option cannot be
-given together.
-
-```sh
-healthcheck evidence create --file scan.pdf --title "Scan"
-healthcheck conversations send-message 12 --text "See these" --file a.pdf --file b.png
-```
-
-- **Lists.** Where the operation takes a list of upload ids, such as `uploadIds`, `--file` repeats. Each file
-  becomes one id, in order. A file that cannot be read fails with `file` before any file is sent.
-- **Parts.** Each file goes through its own Upload link. A file up to the link's part size goes in one request; a
-  larger one, such as an Import ZIP, goes in parts of that size and then a finish. The part size always comes
-  from the link. A file larger than the link takes fails with `file` before any bytes go.
-- **Resume.** When the link answers 409 with the number of bytes it holds, the CLI goes on from there. When a
-  request gets no usable answer, the CLI asks the link how many bytes it holds and goes on from there. A file
-  whose one request failed goes on in parts, since the link takes a whole file only while it holds no byte.
-  After five tries in a row that move no byte forward, it fails with `upload`.
-- **The credential stays home.** The Upload link needs no bearer, so the CLI sends none to it.
-- stdout holds only the result of the final call. The CLI prints no upload progress.
 
 ### The cached description
 
@@ -191,50 +169,16 @@ fails with `network`.
 A new operation reaches you by itself. When you type a group or action the copy does not know, the CLI fetches a
 fresh copy at once, even within the hour. If the command is still unknown, it is a usage mistake (exit 2).
 
-## Talk to our Assistant
-
-```sh
-healthcheck chat send "Which risks are still open?"
-```
-
-`chat send "<text>"` sends one message to our Assistant, as a person does in the Assistant panel, and waits
-until its turn ends. Without `--conversation <id>`, it starts a new conversation. It then prints:
-
-```json
-{"conversationId":"…","lastError":null,"queued":false,"messages":[…]}
-```
-
-- `messages` holds every message after the one you sent, oldest first, as the API gives it: `seq`, `role`,
-  `sender`, the markdown `text`, `attachments`, and `toolActivity` (the tools our Assistant ran, each with its
-  outcome).
-- `conversationId` is the conversation your message landed in. When our Assistant judges it a new topic, this is
-  a new conversation, not the one you named. Continue with that id.
-- `lastError` says why the turn stopped early, when it did.
-- `queued` is true when your message went into a shared conversation while another member's turn was running.
-  Our Assistant answers it in the turn after that one, so `messages` may hold only that member's reply. Read the
-  answer later with `healthcheck conversations list-messages <conversationId> --after <seq> --wait 60`.
-
-**Answer a question or proposal.** Our Assistant asks and proposes in the text of its messages. Answer with the
-next `chat send`, passing the printed `conversationId`:
-
-```sh
-healthcheck chat send "Yes, go ahead." --conversation <conversationId>
-```
-
-An empty Assistant allowance (402 `allowance-exhausted`) or a conversation that cannot take a message now (409)
-prints the ProblemDetails on stderr and exits 1. For everything else about conversations, such as listing them or
-stopping a turn, use the generated `healthcheck conversations …` commands.
-
 ## Raw calls
 
 `healthcheck api <method> <path>` makes one call with your credential. The path is relative to the host, and a
 query string rides in it.
 
 ```sh
-healthcheck api GET '/api/v1/risks?$top=5'
-healthcheck api POST /api/v1/risks --body '{"title":"Flood"}'
-healthcheck api PATCH /api/v1/risks/r1 --body @risk.json
-healthcheck api GET /api/v1/reports/q3 --out q3.pdf
+healthcheck api GET '/api/v1/projects'
+healthcheck api POST /api/v1/projects --body '{"name":"Web shop"}'
+healthcheck api PATCH /api/v1/projects/7 --body @project.json
+healthcheck api GET /api/v1/projects/7/smoke-tests/12/runs/40/pages/3/screenshots/8d1e2f4a-1b2c-4d5e-8f60-718293a4b5c6/file --out shot.png
 ```
 
 - `--body <json|@file>` sends a JSON body, inline or read from a file.
@@ -246,7 +190,7 @@ healthcheck api GET /api/v1/reports/q3 --out q3.pdf
 - stdout holds the JSON result: pretty-printed in a terminal, compact otherwise. An empty success prints
   `{"ok":true,"status":<code>}`.
 - stderr holds errors: the API's ProblemDetails as it came, or `{"error":"<code>","message":"…"}` for a failure
-  on your side, such as `not-signed-in`, `network`, `file`, `upload`, or `binary-response`.
+  on your side, such as `not-signed-in`, `network`, or `binary-response`.
 - On a rate limit (429) the CLI waits for `Retry-After` and retries, up to three times.
 
 ## Exit codes
@@ -256,10 +200,6 @@ healthcheck api GET /api/v1/reports/q3 --out q3.pdf
 | 0 | Success. |
 | 1 | Error: see stderr. |
 | 2 | Usage mistake: fix the command line. |
-| 3 | Browser handoff: a person must finish the act in the browser. |
-
-A Browser handoff prints `{"status":"browser_handoff","reason":…,"handoffUrl":…}` on stdout. Show the link to a
-person; the CLI never opens a browser for it.
 
 ## Environment
 
@@ -269,6 +209,20 @@ person; the CLI never opens a browser for it.
 | `HEALTHCHECK_URL` | The HealthCheck host. Defaults to `https://healthcheck.mvdm.io`. |
 | `HEALTHCHECK_CONFIG_DIR` | The folder for the stored sign-in. |
 | `HEALTHCHECK_CACHE_DIR` | The folder for the cached API description. |
+
+## Develop
+
+The source is the [`healthcheck-cli`](https://github.com/mvdmio/healthcheck-cli) repository.
+
+```sh
+cargo build
+cargo fmt --check
+cargo clippy --all-targets -- -D warnings
+cargo test
+```
+
+The tests run the built `healthcheck` binary against in-process fake HealthCheck and Auth hosts, so they need no
+network, no browser, and no account. [`AGENTS.md`](AGENTS.md) holds the layout of `src/` and how to cut a release.
 
 ## Licence
 

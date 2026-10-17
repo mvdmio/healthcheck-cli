@@ -1,6 +1,6 @@
 ---
 name: healthcheck
-description: Use the `healthcheck` command-line tool to read and change a HealthCheck Account (risks, controls, evidence, frameworks, imports, and every other register) through its REST API, and to talk to its Assistant. Use it when a person asks you to look something up in HealthCheck, change it, upload a file to it, or ask its Assistant. Every command prints JSON.
+description: Use the `healthcheck` command-line tool to read and change a HealthCheck Account (Projects, URL checks, Availability, smoke tests, ignored URLs, telemetry, and the rest of what HealthCheck monitors) through its REST API. Use it when a person asks you to look something up in HealthCheck, change it, or start a smoke test. Every command prints JSON.
 ---
 
 # healthcheck
@@ -9,8 +9,9 @@ description: Use the `healthcheck` command-line tool to read and change a Health
 as that person, in one of their Accounts at a time. Every command prints JSON on stdout, and the exit code says
 what happened.
 
-Use it when the person asks about or wants to change anything they keep in HealthCheck. Prefer a command over raw
-HTTP: the CLI signs in, builds the URL and body, splits large files, and retries on a rate limit.
+Use it when the person asks about or wants to change anything they keep in HealthCheck, such as a Project, a URL
+check, or a smoke test. Prefer a command over raw HTTP: the CLI signs in, builds the URL and body, and retries on
+a rate limit.
 
 Install, or upgrade, with:
 
@@ -33,7 +34,7 @@ works it exits 1.
   as over SSH.
 - `HEALTHCHECK_TOKEN` holds a Personal token for unattended runs, such as CI. It wins over the stored sign-in.
   Only the person can create one, on the API & Agent Access page of their account. Never ask them to paste one
-  into the chat; ask them to set the variable.
+  to you; ask them to set the variable.
 - `HEALTHCHECK_URL` points the CLI at another HealthCheck host. Leave it unset for `https://healthcheck.mvdm.io`.
 - `healthcheck logout` ends this CLI's stored sign-in at Auth and forgets it; `HEALTHCHECK_TOKEN` stays. Do not run
   it unless the person asks.
@@ -49,20 +50,29 @@ A command that fails with `not-signed-in` needs `healthcheck login`.
 ## Commands
 
 Every REST operation is a command: `healthcheck <group> <action>`, both in kebab-case, from its `operationId`
-`<group>.<action>`. The operation `risks.accept` is `healthcheck risks accept <id>`. The group comes from the
-`operationId`, not the tag: `frameworks.start-gap-analysis` is `healthcheck frameworks start-gap-analysis`.
+`<group>.<action>`. The operation `projects.start-smoke-test` is `healthcheck projects start-smoke-test <projectId> <id>`.
+The group comes from the `operationId`, not the tag: every Project command, including the URL check and smoke test
+ones, is in the `projects` group.
 
 - `healthcheck --help` lists the groups. `healthcheck <group> --help` lists its actions.
   `healthcheck <group> <action> --help` shows what the operation does and every argument with its type. Read it
   before your first call of an action.
 - Path parameters are positional arguments, in path order.
-- Query parameters are options. List actions take the OData options `--filter`, `--select`, `--orderby`,
-  `--expand`, `--top`, and `--skip`, as in `healthcheck risks list --filter "status eq 'Open'" --top 5`.
-- Top-level body fields are options, kebab-cased: `collectedAt` is `--collected-at`. A list option repeats.
+- Query parameters are options, kebab-cased. A list action pages with `--page` and `--page-size`, as in
+  `healthcheck projects list-run-pages 7 12 40 --page 2 --page-size 50`.
+- Top-level body fields are options, kebab-cased. A list option repeats.
+
+  ```sh
+  healthcheck projects create --name "Web shop"
+  healthcheck projects create-url-check 7 --name Home --url https://example.com
+  healthcheck projects add-ignored-url 7 12 --url https://example.com/admin
+  healthcheck projects start-smoke-test 7 12
+  ```
+
 - `--body '<json>'` or `--body @file.json` sends a whole body, for nested shapes. Field options win over the same
   keys in it.
 - `healthcheck api <method> <path> [--body …] [--out …]` makes one raw call, for anything the commands do not
-  shape well: `healthcheck api GET '/api/v1/risks?$top=5'`.
+  shape well: `healthcheck api GET '/api/v1/projects'`.
 
 A group or action the CLI does not know makes it fetch the API's description again, so a new operation works at
 once. A command that is still unknown is a usage mistake.
@@ -74,62 +84,17 @@ once. A command that is still unknown is a usage mistake.
 | 0 | Success. stdout holds the JSON result. | Read the result. |
 | 1 | Error. stderr holds the API's ProblemDetails, or `{"error":"<code>","message":…}`. | Read `title`, `detail`, or `message`, fix the cause or tell the person. |
 | 2 | Usage mistake. | Fix your command line; check `--help`. |
-| 3 | Browser handoff. | See below. |
 
 On a rate limit (429) the CLI waits and retries by itself, up to three times. Do not retry an exit 1 in a loop.
 
-## Browser handoff
-
-Some acts need the person in the browser, such as paying or confirming something only they may confirm. Then the
-command exits 3 and prints:
-
-```json
-{"status":"browser_handoff","reason":"…","handoffUrl":"https://…"}
-```
-
-Show the `handoffUrl` to the person and tell them the `reason`. Never open the link yourself, and never try to
-finish the act another way. Once the person says they are done, go on.
-
 ## Files
 
-- **Upload.** An action that takes an upload id, such as `evidence create`, also takes `--file <path>`. The CLI
-  sends the file and then makes the call with the new id. Do not pass the id option too. Where the action takes
-  a list of ids, repeat `--file`. Large files, such as Import ZIPs, go in parts and resume by themselves.
-
-  ```sh
-  healthcheck evidence create --file scan.pdf --title "Scan"
-  ```
-
-- **Download.** An action that answers a file needs `--out <path>`. The CLI writes the file there and prints
-  `{"path","bytes","contentType","fileName"}`. It never writes file bytes to stdout.
-
-  ```sh
-  healthcheck evidence download 8d1e --out scan.pdf
-  ```
-
-## Talk to the Assistant
-
-HealthCheck has its own Assistant, which knows the Account and can act in it. Ask it when the person wants its
-judgement, such as an assessment or a proposal, rather than one record.
+An action that answers a file needs `--out <path>`. The CLI writes the file there and prints
+`{"path","bytes","contentType","fileName"}`. It never writes file bytes to stdout.
 
 ```sh
-healthcheck chat send "Which risks are still open?"
+healthcheck projects download-run-page-screenshot 7 12 40 3 8d1e2f4a-1b2c-4d5e-8f60-718293a4b5c6 --out shot.png
 ```
-
-It waits until the Assistant's turn ends and prints
-`{"conversationId","lastError","queued","messages":[…]}`. Each message has `role`, `sender`, the
-markdown `text`, and `toolActivity`.
-
-- **Continue** with `--conversation <conversationId>`, always the id from the last output: it changes when the
-  Assistant moves the message to a new topic.
-- **Questions and proposals** from the Assistant are in the text of its last message. Put them to the person, or
-  answer them yourself when the person already told you what they want, with the next `chat send` on the same
-  conversation: `healthcheck chat send "Yes, go ahead." --conversation <conversationId>`.
-- **`queued: true`** means another member's turn ran first, and `messages` may not hold your answer yet. Read it
-  later with `healthcheck conversations list-messages <conversationId> --after <seq> --wait 60`, where `<seq>` is
-  the last message you saw.
-- **`lastError`** says why a turn stopped early. An exit 1 with `allowance-exhausted` means the Account's
-  Assistant allowance is used up; tell the person.
 
 ## Privacy
 

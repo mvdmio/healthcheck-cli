@@ -13,14 +13,8 @@ Rust crate `healthcheck-cli`, binary `healthcheck`: a command-line tool for the 
 - Test: `cargo test`
 - Lint: `cargo clippy --all-targets -- -D warnings`
 - Format: `cargo fmt` (CI runs `cargo fmt --check`)
-- E2E suite: `cargo test --test e2e -- --ignored` (see Test-bed below)
-- Launcher: `scripts/test-bed.sh` (see Test-bed below)
 
 CI runs format, lint, and test on Linux, macOS, and Windows for every push and pull request.
-The E2E suite runs nightly (and on manual dispatch) in `.github/workflows/e2e.yml`, which needs the
-`MVDMIO_SUITE_DEPLOY_KEY` secret: the private half of the read-only deploy key "healthcheck-cli E2E (read-only)" on
-`mvdmio-suite`, set up once by a person. GitHub turns the schedule
-off after 60 days without repository activity; re-enable it in the Actions tab.
 
 ## Layout
 
@@ -41,44 +35,19 @@ off after 60 days without repository activity; re-enable it in the Actions tab.
 - `src/openapi.rs`: reads operations, parameters, and body fields out of the description.
 - `src/generated.rs`: builds the generated commands beside the hand-written ones. `src/dispatch.rs`: turns their
   arguments into the request.
-- `src/upload.rs`: `--file`, which sends a file through an Upload link, in parts when it is large, and resumes.
 - `src/failure.rs`, `src/output.rs`: errors, exit codes, and JSON printing.
-- `src/login.rs`, `src/logout.rs`, `src/status.rs`, `src/accounts.rs`, `src/chat.rs`, `src/api.rs`,
+- `src/login.rs`, `src/logout.rs`, `src/status.rs`, `src/accounts.rs`, `src/api.rs`,
   `src/skill.rs`: the commands.
 - `SKILL.md`: the Agent skill file. `healthcheck skill` prints it, built into the binary, so a change to it ships
   with the next release.
-- `tests/fixtures/openapi.json`: the API description the generated-command tests serve.
+- `tests/fixtures/openapi.json`: the API description the generated-command tests serve, cut from HealthCheck's own
+  `/openapi/v1.json`.
 - `CONTEXT.md`: the glossary.
 - HealthCheck and Auth server source: the `mvdmio-suite` monorepo, checked out beside this repo at `../mvdmio-suite`
   (`HealthCheck/`, `Auth/`, `Libraries/`). Read it for any fact about what the API does.
 - `tests/`: tests that run the built binary against in-process fake HealthCheck and Auth hosts (`tests/support`).
   The tests never open a real browser: they run without a display, and the browser test on Linux puts a fake
   `xdg-open` first on `PATH`.
-- `scripts/test-bed.sh`: the Launcher, which starts a Test-bed.
-- `tests/e2e/`: the E2E suite (`smoke.rs`: the smoke Scenarios; `sweeps.rs`: the Help sweep and the Read sweep;
-  `operations.rs`: the operations in the live description and the commands the CLI names them by, copied from
-  `src/` and checked against the binary in `tests/generated.rs`; `test_bed.rs`: finding or starting the Test-bed
-  and running the binary on it; `timing.rs`: the timing report under `target/e2e/`).
-
-## Test-bed
-
-A Test-bed is a real HealthCheck built from `mvdmio-suite`, with its own throwaway Postgres container and data folder.
-Every boot reseeds the database, so the Launcher then writes three rows for seed user 1 on Account 1: a Legal
-Acceptance, a Personal token, and an Assistant allowance with 100 USD of extra funds for `chat send`. It needs
-Docker, the .NET SDK, `bun`, and `curl`, on Linux or macOS.
-
-- `scripts/test-bed.sh` builds and starts one, prints one JSON line `{"url": "...", "token": "..."}` on stdout, and
-  runs in the foreground. Ctrl-C or SIGTERM stops HealthCheck, removes the container, and deletes the folder. Put the
-  two values in `HEALTHCHECK_URL` and `HEALTHCHECK_TOKEN` to run commands against it. Several can run side by side.
-- `MVDMIO_SUITE_DIR`: the `mvdmio-suite` checkout the Launcher builds, by default `../mvdmio-suite` next to this repo.
-  Set it in a worktree, where that default path does not exist.
-- `TEST_BED_BOOT_TIMEOUT`: the seconds the Launcher allows for the build lock, the build, and the boot together
-  (default 1800).
-- `cargo test --test e2e -- --ignored` runs the E2E suite. With `HEALTHCHECK_E2E_URL` and `HEALTHCHECK_E2E_TOKEN` set
-  (both or neither) it uses that Test-bed; with neither, it runs the Launcher itself and stops it when it ends.
-  It points the binary at a temporary folder with `HEALTHCHECK_CONFIG_DIR` and `HEALTHCHECK_CACHE_DIR`.
-- Plain `cargo test` never runs the E2E suite: it lists its Scenarios as ignored and needs no .NET, Docker, or
-  Postgres.
 
 ## Releases
 
@@ -97,8 +66,7 @@ To cut a release:
 
 ## Rules
 
-- Every output is JSON, except `--help`, `--version`, and `healthcheck skill` (Markdown). Exit codes: 0 success, 1 error, 2 usage, 3 Browser
-  handoff.
+- Every output is JSON, except `--help`, `--version`, and `healthcheck skill` (Markdown). Exit codes: 0 success, 1 error, 2 usage.
 - Tests drive the binary as an Agent does: arguments and environment in; stdout, stderr, the exit code, and the
   requests that reached the fake server out. They never check internal types.
 - TLS is rustls only: `cargo tree -i openssl-sys` must find nothing.
