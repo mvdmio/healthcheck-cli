@@ -59,10 +59,6 @@ pub struct Schema {
     /// Many values of `kind`, one per repeat of the option.
     pub array: bool,
     pub format: Option<String>,
-    /// Allowed values of a string, integer, or number, as typed.
-    pub choices: Vec<String>,
-    /// `x-upload-target`, on the schema or on its parameter: the value is an upload id, which `--file` fills.
-    pub upload_target: Option<String>,
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -182,10 +178,7 @@ fn parameters(document: &Value, item: &Value, operation: &Value) -> Vec<(String,
                 name: name.to_string(),
                 description: text(&parameter["description"]),
                 required: parameter["required"] == true,
-                schema: Schema {
-                    upload_target: text(&parameter["x-upload-target"]).or(schema.upload_target),
-                    ..schema
-                },
+                schema,
             },
         ));
     }
@@ -251,7 +244,6 @@ fn body_schema<'a>(document: &'a Value, schema: &'a Value) -> &'a Value {
 }
 
 fn schema(schema: &Value) -> Schema {
-    let upload_target = text(&schema["x-upload-target"]);
     let format = text(&schema["format"]);
     let types = types(schema);
     let is_json = schema.get("$ref").is_some()
@@ -262,7 +254,6 @@ fn schema(schema: &Value) -> Schema {
         let items = self::schema(&schema["items"]);
         return Schema {
             array: true,
-            upload_target,
             ..items
         };
     }
@@ -279,22 +270,10 @@ fn schema(schema: &Value) -> Schema {
     } else {
         Kind::Json
     };
-    let choices = schema["enum"]
-        .as_array()
-        .into_iter()
-        .flatten()
-        .filter_map(|choice| match (kind, choice) {
-            (Kind::String, Value::String(text)) => Some(text.clone()),
-            (Kind::Integer | Kind::Number, Value::Number(number)) => Some(number.to_string()),
-            _ => None,
-        })
-        .collect();
     Schema {
         kind,
         array: false,
         format,
-        choices,
-        upload_target,
     }
 }
 
@@ -354,7 +333,7 @@ fn text(value: &Value) -> Option<String> {
         .map(str::to_string)
 }
 
-/// `collectedAt` → `collected-at`, `$filter` → `filter`, `URLPath` → `url-path`. Anything but letters and
+/// `collectedAt` → `collected-at`, `URLPath` → `url-path`. Anything but letters and
 /// digits separates words.
 pub fn kebab_case(name: &str) -> String {
     let characters: Vec<char> = name.chars().collect();

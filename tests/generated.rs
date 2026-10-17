@@ -144,27 +144,6 @@ fn path_parameters_follow_the_path_order_and_are_encoded() {
 }
 
 #[test]
-fn odata_options_send_their_dollar_names() {
-    let host = Host::start();
-
-    let run = host.run(&[
-        "risks",
-        "list",
-        "--filter",
-        "status eq 'Open'",
-        "--top",
-        "5",
-    ]);
-
-    assert_eq!(run.code, 0, "{run:#?}");
-    let request = host.only_api_request();
-    assert_eq!(request.path(), "/api/v1/risks");
-    assert_eq!(request.form("$filter").as_deref(), Some("status eq 'Open'"));
-    assert_eq!(request.form("$top").as_deref(), Some("5"));
-    assert!(request.url.contains("$top=5"), "{}", request.url);
-}
-
-#[test]
 fn an_integer_option_refuses_text_before_any_request() {
     let host = Host::start();
 
@@ -270,20 +249,6 @@ fn a_required_body_with_no_input_is_an_empty_object_and_an_optional_one_is_left_
     assert_eq!(requests[1].method, "PATCH");
     assert!(requests[1].body.is_empty());
     assert_eq!(requests[1].header("Content-Type"), None);
-}
-
-#[test]
-fn an_enum_option_refuses_other_values_and_lists_them_in_help() {
-    let host = Host::start();
-
-    let wrong = host.run(&["risks", "create", "--status", "Maybe"]);
-    let help = host.run(&["risks", "create", "--help"]);
-
-    assert_eq!(wrong.code, 2, "{wrong:#?}");
-    assert!(host.api_requests().is_empty());
-    assert!(help.stdout.contains("Open"), "{}", help.stdout);
-    assert!(help.stdout.contains("Accepted"), "{}", help.stdout);
-    assert!(help.stdout.contains("Closed"), "{}", help.stdout);
 }
 
 #[test]
@@ -580,26 +545,7 @@ fn out_on_a_command_that_answers_json_is_a_usage_mistake() {
 }
 
 #[test]
-fn an_upload_target_field_says_so_in_help() {
-    let host = Host::start();
-
-    let run = host.run(&["evidence", "create", "--help"]);
-
-    assert_eq!(run.code, 0, "{run:#?}");
-    assert!(
-        run.stdout.contains("--upload-id <STRING>"),
-        "{}",
-        run.stdout
-    );
-    assert!(
-        run.stdout.contains("upload target `evidence`"),
-        "{}",
-        run.stdout
-    );
-}
-
-#[test]
-fn a_generated_error_answer_keeps_the_exit_codes() {
+fn a_generated_error_answer_exits_1_with_the_problem() {
     let server = FakeServer::start(|request| {
         if request.path() == DESCRIPTION_PATH {
             return Reply::json(200, &fixture().to_string());
@@ -619,20 +565,9 @@ fn a_generated_error_answer_keeps_the_exit_codes() {
         ],
     );
 
-    assert_eq!(run.code, 3, "{run:#?}");
-    assert_eq!(run.stdout_json()["handoffUrl"], "https://example.test/go");
-}
-
-#[test]
-fn an_integer_enum_is_checked_and_sent_as_a_number() {
-    let host = Host::start();
-
-    let wrong = host.run(&["risks", "create", "--impact", "4"]);
-    let right = host.run(&["risks", "create", "--impact", "2"]);
-
-    assert_eq!(wrong.code, 2, "{wrong:#?}");
-    assert_eq!(right.code, 0, "{right:#?}");
-    assert_eq!(body_json(&host.only_api_request()), json!({ "impact": 2 }));
+    assert_eq!(run.code, 1, "{run:#?}");
+    assert_eq!(run.stderr_json()["type"], "browser-handoff");
+    assert!(run.stdout.is_empty());
 }
 
 #[test]

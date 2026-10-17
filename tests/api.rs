@@ -157,7 +157,7 @@ fn large_numbers_keep_their_precision() {
 }
 
 #[test]
-fn a_forbidden_that_is_no_handoff_is_an_error() {
+fn a_forbidden_is_an_error() {
     const PROBLEM: &str = "{\"type\":\"forbidden\",\"title\":\"Forbidden\",\"status\":403}";
     let server = FakeServer::start(|_| Reply::problem(403, PROBLEM));
 
@@ -169,42 +169,15 @@ fn a_forbidden_that_is_no_handoff_is_an_error() {
 }
 
 #[test]
-fn a_browser_handoff_prints_the_link_and_exits_3() {
-    let server = FakeServer::start(|_| {
-        Reply::problem(
-            403,
-            "{\"type\":\"browser-handoff\",\"title\":\"Finish in the browser\",\"status\":403,\
-             \"detail\":\"Subscribing charges money.\",\"handoffUrl\":\"https://auth.example/subscribe\"}",
-        )
-    });
+fn a_browser_handoff_problem_is_an_ordinary_problem_and_exits_1() {
+    const PROBLEM: &str = "{\"type\":\"browser-handoff\",\"title\":\"Finish in the browser\",\"status\":403,\"handoffUrl\":\"https://auth.example/go\"}";
+    let server = FakeServer::start(|_| Reply::problem(403, PROBLEM));
 
     let run = api(&server, &["POST", "/api/v1/license/subscribe"]);
 
-    assert_eq!(run.code, 3, "{run:#?}");
-    assert_eq!(
-        run.stdout_json(),
-        json!({
-            "status": "browser_handoff",
-            "reason": "Subscribing charges money.",
-            "handoffUrl": "https://auth.example/subscribe",
-        })
-    );
-}
-
-#[test]
-fn a_browser_handoff_without_detail_gives_the_title_as_reason() {
-    let server = FakeServer::start(|_| {
-        Reply::problem(
-            403,
-            "{\"type\":\"browser-handoff\",\"title\":\"Accept the terms\",\"status\":403,\
-             \"handoffUrl\":\"https://healthcheck.example/Legal/Accept\"}",
-        )
-    });
-
-    let run = api(&server, &["GET", "/api/v1/risks"]);
-
-    assert_eq!(run.code, 3, "{run:#?}");
-    assert_eq!(run.stdout_json()["reason"], "Accept the terms");
+    assert_eq!(run.code, 1, "{run:#?}");
+    assert_eq!(run.stderr.trim_end(), PROBLEM);
+    assert!(run.stdout.is_empty());
 }
 
 #[test]

@@ -8,8 +8,6 @@ use ureq::http::{Response, header};
 use crate::failure::{ErrorCode, Failure};
 use crate::output;
 
-const BROWSER_HANDOFF: &str = "browser-handoff";
-
 /// Turns an API answer into the CLI's output. A success prints its JSON body, `{"ok":true,"status":…}` when
 /// the body is empty, or, with `out`, writes the body there and prints a summary. A non-JSON body without
 /// `out` is refused, so no bytes reach stdout.
@@ -85,12 +83,11 @@ fn print_empty_success(status: u16) -> Result<(), Failure> {
     Ok(())
 }
 
-/// A 403 `browser-handoff` becomes a Browser handoff; any other error body passes through as it came.
+/// An error body from the API passes through as it came; anything else becomes a local `http` error.
 pub fn problem(status: u16, content_type: Option<&str>, body: Vec<u8>) -> Failure {
-    let Some(problem) = content_type
-        .filter(|content_type| is_json(content_type))
-        .and_then(|_| serde_json::from_slice::<Value>(&body).ok())
-    else {
+    let is_problem =
+        content_type.is_some_and(is_json) && serde_json::from_slice::<Value>(&body).is_ok();
+    if !is_problem {
         // An empty or non-JSON body (such as a proxy's HTML page) is not the API's; stderr stays JSON.
         return Failure::local(
             ErrorCode::Http,
@@ -103,18 +100,6 @@ pub fn problem(status: u16, content_type: Option<&str>, body: Vec<u8>) -> Failur
                 }
             ),
         );
-    };
-    if status == 403 && problem["type"] == BROWSER_HANDOFF {
-        let text = |field: &str| {
-            problem[field]
-                .as_str()
-                .filter(|text| !text.is_empty())
-                .map(str::to_string)
-        };
-        return Failure::BrowserHandoff {
-            reason: text("detail").or_else(|| text("title")),
-            handoff_url: text("handoffUrl"),
-        };
     }
     Failure::Problem(body)
 }
