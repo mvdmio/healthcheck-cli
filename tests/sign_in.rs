@@ -329,7 +329,7 @@ fn an_expired_access_token_is_refreshed_before_the_call_and_the_new_refresh_toke
     let hosts = Hosts::start(rotating_auth, ok_api);
     hosts.store("access-1", unix_now() + 30, "refresh-1");
 
-    let run = hosts.run(&["api", "GET", "/api/v1/risks"], &[]);
+    let run = hosts.run(&["api", "GET", "/api/v1/projects"], &[]);
 
     assert_eq!(run.code, 0, "{run:#?}");
     let refresh = hosts.auth_requests("/connect/token");
@@ -361,7 +361,7 @@ fn a_fresh_access_token_is_used_without_a_refresh() {
     let hosts = Hosts::start(rotating_auth, ok_api);
     hosts.store("access-1", unix_now() + 3600, "refresh-1");
 
-    let run = hosts.run(&["api", "GET", "/api/v1/risks"], &[]);
+    let run = hosts.run(&["api", "GET", "/api/v1/projects"], &[]);
 
     assert_eq!(run.code, 0, "{run:#?}");
     assert!(hosts.auth.requests().is_empty());
@@ -382,7 +382,7 @@ fn a_401_refreshes_once_and_retries_once() {
     });
     hosts.store("access-1", unix_now() + 3600, "refresh-1");
 
-    let run = hosts.run(&["api", "GET", "/api/v1/risks"], &[]);
+    let run = hosts.run(&["api", "GET", "/api/v1/projects"], &[]);
 
     assert_eq!(run.code, 0, "{run:#?}");
     assert_eq!(run.stdout_json(), json!({ "ok": 1 }));
@@ -397,7 +397,7 @@ fn a_second_401_after_the_refresh_is_reported() {
     });
     hosts.store("access-1", unix_now() + 3600, "refresh-1");
 
-    let run = hosts.run(&["api", "GET", "/api/v1/risks"], &[]);
+    let run = hosts.run(&["api", "GET", "/api/v1/projects"], &[]);
 
     assert_eq!(run.code, 1, "{run:#?}");
     assert_eq!(run.stderr_json()["type"], "unauthorized");
@@ -417,7 +417,7 @@ fn a_refresh_answered_invalid_grant_removes_only_that_hosts_entry_and_asks_for_l
         "other-refresh",
     );
 
-    let run = hosts.run(&["api", "GET", "/api/v1/risks"], &[]);
+    let run = hosts.run(&["api", "GET", "/api/v1/projects"], &[]);
 
     assert_eq!(run.code, 1, "{run:#?}");
     let error = run.stderr_json();
@@ -443,14 +443,14 @@ fn healthcheck_token_wins_over_the_stored_sign_in_and_is_never_refreshed_or_stor
     hosts.store("access-1", unix_now(), "refresh-1");
 
     let run = hosts.run(
-        &["api", "GET", "/api/v1/risks"],
-        &[("HEALTHCHECK_TOKEN", "cmp_pat_test")],
+        &["api", "GET", "/api/v1/projects"],
+        &[("HEALTHCHECK_TOKEN", "mvdm_pat_test")],
     );
 
     assert_eq!(run.code, 0, "{run:#?}");
     assert_eq!(
         hosts.api_requests()[0].header("Authorization"),
-        Some("Bearer cmp_pat_test")
+        Some("Bearer mvdm_pat_test")
     );
     assert!(hosts.auth.requests().is_empty());
     assert_eq!(hosts.stored()["accessToken"], "access-1");
@@ -467,7 +467,7 @@ fn logout_revokes_the_refresh_token_then_deletes_the_file() {
     );
     hosts.store("access-1", unix_now() + 3600, "refresh-1");
 
-    let run = hosts.run(&["logout"], &[("HEALTHCHECK_TOKEN", "cmp_pat_test")]);
+    let run = hosts.run(&["logout"], &[("HEALTHCHECK_TOKEN", "mvdm_pat_test")]);
 
     assert_eq!(run.code, 0, "{run:#?}");
     assert_eq!(run.stdout_json(), json!({ "status": "logged_out" }));
@@ -507,7 +507,7 @@ fn logout_without_a_stored_sign_in_succeeds_without_a_request() {
 fn status_with_a_personal_token_names_it_and_the_current_account() {
     let hosts = Hosts::start(|_| Reply::empty(404), accounts_api);
 
-    let run = hosts.run(&["status"], &[("HEALTHCHECK_TOKEN", "cmp_pat_test")]);
+    let run = hosts.run(&["status"], &[("HEALTHCHECK_TOKEN", "mvdm_pat_test")]);
 
     assert_eq!(run.code, 0, "{run:#?}");
     assert_eq!(
@@ -522,7 +522,7 @@ fn status_with_a_personal_token_names_it_and_the_current_account() {
     );
     assert_eq!(
         hosts.api_requests()[0].header("Authorization"),
-        Some("Bearer cmp_pat_test")
+        Some("Bearer mvdm_pat_test")
     );
 }
 
@@ -571,7 +571,7 @@ fn status_with_a_rejected_credential_prints_the_problem_and_exits_1() {
     let problem = "{\"type\":\"unauthorized\",\"title\":\"Unauthorized\",\"status\":401}";
     let hosts = Hosts::start(|_| Reply::empty(404), move |_| Reply::problem(401, problem));
 
-    let run = hosts.run(&["status"], &[("HEALTHCHECK_TOKEN", "cmp_pat_revoked")]);
+    let run = hosts.run(&["status"], &[("HEALTHCHECK_TOKEN", "mvdm_pat_revoked")]);
 
     assert_eq!(run.code, 1, "{run:#?}");
     assert_eq!(run.stdout, "");
@@ -584,7 +584,7 @@ fn accounts_list_gets_the_accounts_and_prints_them() {
 
     let run = hosts.run(
         &["accounts", "list"],
-        &[("HEALTHCHECK_TOKEN", "cmp_pat_test")],
+        &[("HEALTHCHECK_TOKEN", "mvdm_pat_test")],
     );
 
     assert_eq!(run.code, 0, "{run:#?}");
@@ -608,7 +608,7 @@ fn accounts_switch_posts_to_the_accounts_switch_and_prints_the_answer() {
 
     let run = hosts.run(
         &["accounts", "switch", "1"],
-        &[("HEALTHCHECK_TOKEN", "cmp_pat_test")],
+        &[("HEALTHCHECK_TOKEN", "mvdm_pat_test")],
     );
 
     assert_eq!(run.code, 0, "{run:#?}");
@@ -625,7 +625,7 @@ fn accounts_switch_needs_a_numeric_id() {
 
     let run = hosts.run(
         &["accounts", "switch", "alpha"],
-        &[("HEALTHCHECK_TOKEN", "cmp_pat_test")],
+        &[("HEALTHCHECK_TOKEN", "mvdm_pat_test")],
     );
 
     assert_eq!(run.code, 2, "{run:#?}");
@@ -838,7 +838,7 @@ fn an_invalid_grant_after_another_command_rotated_the_token_keeps_the_newer_sign
     });
     hosts.store("access-1", unix_now(), "refresh-1");
 
-    let run = hosts.run(&["api", "GET", "/api/v1/risks"], &[]);
+    let run = hosts.run(&["api", "GET", "/api/v1/projects"], &[]);
 
     assert_eq!(run.code, 0, "{run:#?}");
     assert_eq!(run.stdout_json(), json!({ "ok": 1 }));

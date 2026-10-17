@@ -220,7 +220,7 @@ impl Run {
 }
 
 /// The Personal token the tests pass in `HEALTHCHECK_TOKEN`.
-pub const TOKEN: &str = "cmp_pat_test";
+pub const TOKEN: &str = "mvdm_pat_test";
 
 /// Runs `healthcheck <args>` against `server` with the Personal token `TOKEN`.
 pub fn healthcheck_with_token(server: &FakeServer, args: &[&str]) -> Run {

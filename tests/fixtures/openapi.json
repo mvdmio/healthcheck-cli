@@ -1,248 +1,2195 @@
 {
   "openapi": "3.1.1",
-  "info": { "title": "Example API", "version": "v1" },
-  "tags": [
-    { "name": "Accounts" },
-    { "name": "Evidence" },
-    { "name": "Frameworks" },
-    { "name": "Proposed coverage" },
-    { "name": "Risks" }
+  "info": {
+    "title": "HealthCheck API",
+    "version": "v1"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:13899/"
+    }
   ],
   "paths": {
-    "/api/v1/risks": {
+    "/api/v1/projects": {
       "get": {
-        "tags": ["Risks"],
-        "summary": "List Risks",
-        "description": "Lists the Risks of the Account, newest first.",
-        "operationId": "risks.list",
-        "parameters": [
-          { "name": "$filter", "in": "query", "description": "An OData filter.", "schema": { "type": "string" } },
-          { "name": "$select", "in": "query", "schema": { "type": "string" } },
-          { "name": "$orderby", "in": "query", "schema": { "type": "string" } },
-          { "name": "$expand", "in": "query", "schema": { "type": "string" } },
-          {
-            "name": "$top",
-            "in": "query",
-            "description": "At most this many Risks.",
-            "schema": { "pattern": "^-?(?:0|[1-9]\\d*)$", "type": ["integer", "string"], "format": "int32" }
-          },
-          {
-            "name": "$skip",
-            "in": "query",
-            "schema": { "pattern": "^-?(?:0|[1-9]\\d*)$", "type": ["integer", "string"], "format": "int32" }
-          }
+        "tags": [
+          "Projects"
         ],
+        "summary": "List Projects",
+        "description": "Lists every Project of the Account, by name, as the Projects page does. The list is not paged. Each row carries `id`, `name`, and `statusPageSlug`, the address segment of the Project's public status page.",
+        "operationId": "projects.list",
         "responses": {
-          "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "object" } } } }
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProjectList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`unauthorized`: No bearer, or an unknown, ended, or expired credential. `WWW-Authenticate` names the Protected Resource Metadata.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "unauthorized"
+            ]
+          },
+          "403": {
+            "description": "`no-account`: The credential is in no Account the User belongs to. `accounts` lists where it can switch to. `license-closed`: The Account's HealthCheck License is Closed. `detail` gives the reason. `browser-handoff`: A person must finish this act in the browser: open `handoffUrl`.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "no-account",
+              "license-closed",
+              "browser-handoff"
+            ]
+          },
+          "429": {
+            "description": "`rate-limited`: Over the per-User rate limit. `Retry-After` says when to try again.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "rate-limited"
+            ]
+          }
         }
       },
       "post": {
-        "tags": ["Risks"],
-        "summary": "Create a Risk",
-        "description": "Records a Risk. Answers 201 with the new Risk.",
-        "operationId": "risks.create",
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Create a Project",
+        "description": "Creates a Project as the New project page does. `name` is required: a missing or blank one answers 422 on that field. The status page slug is generated from the name; change it with `projects.set-status-page`. Answers 201 with the new Project.",
+        "operationId": "projects.create",
         "requestBody": {
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RiskCreate" } } },
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiProjectCreate"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiProjectCreate"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiProjectCreate"
+              }
+            }
+          },
           "required": true
         },
         "responses": {
-          "201": { "description": "Created", "content": { "application/json": { "schema": { "type": "object" } } } }
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProjectDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`unauthorized`: No bearer, or an unknown, ended, or expired credential. `WWW-Authenticate` names the Protected Resource Metadata.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "unauthorized"
+            ]
+          },
+          "403": {
+            "description": "`no-account`: The credential is in no Account the User belongs to. `accounts` lists where it can switch to. `license-closed`: The Account's HealthCheck License is Closed. `detail` gives the reason. `browser-handoff`: A person must finish this act in the browser: open `handoffUrl`.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "no-account",
+              "license-closed",
+              "browser-handoff"
+            ]
+          },
+          "422": {
+            "description": "`validation`: The input was refused. `errors` lists fields for a body or query that does not bind; otherwise `detail` gives the rule.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "validation"
+            ]
+          },
+          "429": {
+            "description": "`rate-limited`: Over the per-User rate limit. `Retry-After` says when to try again.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "rate-limited"
+            ]
+          }
         }
       }
     },
-    "/api/v1/risks/{id}": {
-      "parameters": [
-        { "name": "id", "in": "path", "required": true, "description": "The Risk id.", "schema": { "type": "string", "format": "uuid" } }
-      ],
-      "patch": {
-        "tags": ["Risks"],
-        "summary": "Update a Risk",
-        "operationId": "risks.update",
+    "/api/v1/projects/{id}": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Get a Project",
+        "description": "Returns the Project with its name and the slug of its public status page. Its API key is not part of it: read that with `projects.get-api-key`.",
+        "operationId": "projects.get",
         "parameters": [
-          { "name": "notify", "in": "query", "description": "Tell the owner.", "schema": { "type": "boolean" } }
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProjectDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`unauthorized`: No bearer, or an unknown, ended, or expired credential. `WWW-Authenticate` names the Protected Resource Metadata.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "unauthorized"
+            ]
+          },
+          "403": {
+            "description": "`no-account`: The credential is in no Account the User belongs to. `accounts` lists where it can switch to. `license-closed`: The Account's HealthCheck License is Closed. `detail` gives the reason. `browser-handoff`: A person must finish this act in the browser: open `handoffUrl`.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "no-account",
+              "license-closed",
+              "browser-handoff"
+            ]
+          },
+          "404": {
+            "description": "`not-found`: No such record in this Account.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "not-found"
+            ]
+          },
+          "429": {
+            "description": "`rate-limited`: Over the per-User rate limit. `Retry-After` says when to try again.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "rate-limited"
+            ]
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Rename a Project",
+        "description": "Gives the Project a new name, as the Project settings page does. `name` is required: a missing or blank one answers 422 on that field.",
+        "operationId": "projects.update",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int64"
+            }
+          }
         ],
         "requestBody": {
           "content": {
             "application/json": {
-              "schema": { "oneOf": [{ "type": "null" }, { "$ref": "#/components/schemas/RiskUpdate" }] }
+              "schema": {
+                "$ref": "#/components/schemas/ApiProjectUpdate"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiProjectUpdate"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiProjectUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProjectDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`unauthorized`: No bearer, or an unknown, ended, or expired credential. `WWW-Authenticate` names the Protected Resource Metadata.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "unauthorized"
+            ]
+          },
+          "403": {
+            "description": "`no-account`: The credential is in no Account the User belongs to. `accounts` lists where it can switch to. `license-closed`: The Account's HealthCheck License is Closed. `detail` gives the reason. `browser-handoff`: A person must finish this act in the browser: open `handoffUrl`.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "no-account",
+              "license-closed",
+              "browser-handoff"
+            ]
+          },
+          "404": {
+            "description": "`not-found`: No such record in this Account.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "not-found"
+            ]
+          },
+          "422": {
+            "description": "`validation`: The input was refused. `errors` lists fields for a body or query that does not bind; otherwise `detail` gives the rule.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "validation"
+            ]
+          },
+          "429": {
+            "description": "`rate-limited`: Over the per-User rate limit. `Retry-After` says when to try again.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "rate-limited"
+            ]
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{projectId}/email-settings/{userId}": {
+      "put": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Set a user's email settings",
+        "description": "Sets the Availability email flags of one user of the Account for the Project, as the Email settings page does. Any member may set any user's flags. A flag you leave out keeps its current value. A user who is not in the Account answers 404.",
+        "operationId": "projects.set-email-settings",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int64"
             }
           }
-        },
-        "responses": {
-          "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "object" } } } }
-        }
-      }
-    },
-    "/api/v1/risks/{id}/accept": {
-      "post": {
-        "tags": ["Risks"],
-        "summary": "Accept a Risk",
-        "description": "Accepts the Risk as it stands, so it needs no treatment.",
-        "operationId": "risks.accept",
-        "parameters": [
-          { "name": "id", "in": "path", "required": true, "description": "The Risk id.", "schema": { "type": "string" } }
         ],
-        "responses": {
-          "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "object" } } } }
-        }
-      }
-    },
-    "/api/v1/frameworks": {
-      "get": {
-        "tags": ["Frameworks"],
-        "summary": "List Frameworks",
-        "operationId": "frameworks.list",
-        "responses": {
-          "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "object" } } } }
-        }
-      }
-    },
-    "/api/v1/frameworks/{frameworkId}/requirements/{requirementId}": {
-      "get": {
-        "tags": ["Frameworks"],
-        "summary": "Get a Requirement",
-        "operationId": "frameworks.get-requirement",
-        "parameters": [
-          { "name": "requirementId", "in": "path", "required": true, "schema": { "type": "string" } },
-          { "name": "frameworkId", "in": "path", "required": true, "schema": { "type": "string" } }
-        ],
-        "responses": {
-          "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "object" } } } }
-        }
-      }
-    },
-    "/api/v1/frameworks/{frameworkId}/proposed-coverage": {
-      "get": {
-        "tags": ["Proposed coverage"],
-        "summary": "List proposed coverage",
-        "description": "Lists the coverage proposed for the Framework.",
-        "operationId": "frameworks.list-proposed-coverage",
-        "parameters": [
-          { "name": "frameworkId", "in": "path", "required": true, "schema": { "type": "string" } }
-        ],
-        "responses": {
-          "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "object" } } } }
-        }
-      }
-    },
-    "/api/v1/evidence": {
-      "post": {
-        "tags": ["Evidence"],
-        "summary": "Create Evidence",
-        "operationId": "evidence.create",
         "requestBody": {
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EvidenceCreate" } } },
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEmailSettingsUpdate"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEmailSettingsUpdate"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiEmailSettingsUpdate"
+              }
+            }
+          },
           "required": true
         },
         "responses": {
-          "201": { "description": "Created", "content": { "application/json": { "schema": { "type": "object" } } } }
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEmailSettingsAnswer"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`unauthorized`: No bearer, or an unknown, ended, or expired credential. `WWW-Authenticate` names the Protected Resource Metadata.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "unauthorized"
+            ]
+          },
+          "403": {
+            "description": "`no-account`: The credential is in no Account the User belongs to. `accounts` lists where it can switch to. `license-closed`: The Account's HealthCheck License is Closed. `detail` gives the reason. `browser-handoff`: A person must finish this act in the browser: open `handoffUrl`.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "no-account",
+              "license-closed",
+              "browser-handoff"
+            ]
+          },
+          "404": {
+            "description": "`not-found`: No such record in this Account.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "not-found"
+            ]
+          },
+          "422": {
+            "description": "`validation`: The input was refused. `errors` lists fields for a body or query that does not bind; otherwise `detail` gives the rule.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "validation"
+            ]
+          },
+          "429": {
+            "description": "`rate-limited`: Over the per-User rate limit. `Retry-After` says when to try again.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "rate-limited"
+            ]
+          }
         }
       }
     },
-    "/api/v1/conversations/{id}/messages": {
+    "/api/v1/projects/{projectId}/smoke-tests/{smokeTestId}/inputs": {
       "post": {
-        "tags": ["Conversations"],
-        "summary": "Send a message",
-        "operationId": "conversations.send-message",
-        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "tags": [
+          "Smoke Test Inputs"
+        ],
+        "summary": "Create an Input",
+        "description": "Creates an Input as the New Input page does. `url` is required, absolute, and stored lower case without query string and fragment; a Smoke Test has one Input per address. `fields` lists the form's fields as `name`, `type`, `value`, and for a select `options`. A `password` field's value is stored encrypted and never returned. A blank or relative `url`, one the Smoke Test has an Input for, and fields without a name or type answer 422. Answers 201 with the Input.",
+        "operationId": "projects.create-smoke-test-input",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "smokeTestId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
         "requestBody": {
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MessageSend" } } },
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiSmokeTestInputCreate"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiSmokeTestInputCreate"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiSmokeTestInputCreate"
+              }
+            }
+          },
           "required": true
         },
-        "responses": { "202": { "description": "Accepted", "content": { "application/json": { "schema": { "type": "object" } } } } }
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiSmokeTestInputDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`unauthorized`: No bearer, or an unknown, ended, or expired credential. `WWW-Authenticate` names the Protected Resource Metadata.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "unauthorized"
+            ]
+          },
+          "403": {
+            "description": "`no-account`: The credential is in no Account the User belongs to. `accounts` lists where it can switch to. `license-closed`: The Account's HealthCheck License is Closed. `detail` gives the reason. `browser-handoff`: A person must finish this act in the browser: open `handoffUrl`.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "no-account",
+              "license-closed",
+              "browser-handoff"
+            ]
+          },
+          "404": {
+            "description": "`not-found`: No such record in this Account.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "not-found"
+            ]
+          },
+          "422": {
+            "description": "`validation`: The input was refused. `errors` lists fields for a body or query that does not bind; otherwise `detail` gives the rule.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "validation"
+            ]
+          },
+          "429": {
+            "description": "`rate-limited`: Over the per-User rate limit. `Retry-After` says when to try again.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "rate-limited"
+            ]
+          }
+        }
       }
     },
-    "/api/v1/evidence/{id}/file": {
+    "/api/v1/projects/{projectId}/smoke-tests/{smokeTestId}/runs/{runId}/pages": {
       "get": {
-        "tags": ["Evidence"],
-        "summary": "Download an Evidence file",
-        "operationId": "evidence.download",
+        "tags": [
+          "Smoke Test Runs"
+        ],
+        "summary": "List a Run's pages",
+        "description": "Pages through the pages of one Run, as the Run page does, with the total count. `page` (from 1, default 1) and `pageSize` (1 to 250, default 50) page the list on the server; a value out of range is brought into range, and a page past the last answers no rows. `errors` is `All` (default), `WithErrorsOnly`, or `WithoutErrorsOnly`. `ignored` is `All`, `UnignoredOnly` (default, as the page opens), or `IgnoredOnly`. `search` matches part of the URL, ignoring case. `sortBy` is `url` (default), `status`, `loadTime`, or `issues`; any other value sorts by URL. `sortDirection` is `Ascending` (default) or `Descending`. Each row says whether its URL is `ignored`.",
+        "operationId": "projects.list-run-pages",
         "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "smokeTestId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "errors",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/ErrorFilter"
+            }
+          },
+          {
+            "name": "ignored",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/IgnoreFilter"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortDirection",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/DynamicTableSortDirection"
+            }
+          }
         ],
         "responses": {
-          "200": { "description": "OK", "content": { "application/octet-stream": { "schema": { "type": "string", "format": "binary" } } } },
-          "404": { "description": "Not found", "content": { "application/problem+json": { "schema": { "type": "object" } } } }
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiPagedListOfApiRunPageRow"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`unauthorized`: No bearer, or an unknown, ended, or expired credential. `WWW-Authenticate` names the Protected Resource Metadata.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "unauthorized"
+            ]
+          },
+          "403": {
+            "description": "`no-account`: The credential is in no Account the User belongs to. `accounts` lists where it can switch to. `license-closed`: The Account's HealthCheck License is Closed. `detail` gives the reason. `browser-handoff`: A person must finish this act in the browser: open `handoffUrl`.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "no-account",
+              "license-closed",
+              "browser-handoff"
+            ]
+          },
+          "404": {
+            "description": "`not-found`: No such record in this Account.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "not-found"
+            ]
+          },
+          "422": {
+            "description": "`validation`: The input was refused. `errors` lists fields for a body or query that does not bind; otherwise `detail` gives the rule.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "validation"
+            ]
+          },
+          "429": {
+            "description": "`rate-limited`: Over the per-User rate limit. `Retry-After` says when to try again.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "rate-limited"
+            ]
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{projectId}/smoke-tests/{smokeTestId}/runs/{runId}/pages/{pageId}/screenshots/{screenshotId}/file": {
+      "get": {
+        "tags": [
+          "Smoke Test Runs"
+        ],
+        "summary": "Download a screenshot",
+        "description": "Streams the screenshot of a Run's page, with its stored content type and its stored file name in `Content-Disposition`. The screenshot ids are in the page's `screenshots`.",
+        "operationId": "projects.download-run-page-screenshot",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "smokeTestId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "pageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "screenshotId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`unauthorized`: No bearer, or an unknown, ended, or expired credential. `WWW-Authenticate` names the Protected Resource Metadata.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "unauthorized"
+            ]
+          },
+          "403": {
+            "description": "`no-account`: The credential is in no Account the User belongs to. `accounts` lists where it can switch to. `license-closed`: The Account's HealthCheck License is Closed. `detail` gives the reason. `browser-handoff`: A person must finish this act in the browser: open `handoffUrl`.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "no-account",
+              "license-closed",
+              "browser-handoff"
+            ]
+          },
+          "404": {
+            "description": "`not-found`: No such record in this Account.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "not-found"
+            ]
+          },
+          "429": {
+            "description": "`rate-limited`: Over the per-User rate limit. `Retry-After` says when to try again.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "rate-limited"
+            ]
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{projectId}/smoke-tests/{id}/ignored-urls": {
+      "delete": {
+        "tags": [
+          "Smoke Tests"
+        ],
+        "summary": "Delete an ignored URL",
+        "description": "Removes the prefix given in the `url` query parameter from the Smoke Test's ignored URLs. A prefix that is not in the list changes nothing. Answers the Smoke Test's ignored URLs after the change.",
+        "operationId": "projects.delete-ignored-url",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "url",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiIgnoredUrls"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`unauthorized`: No bearer, or an unknown, ended, or expired credential. `WWW-Authenticate` names the Protected Resource Metadata.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "unauthorized"
+            ]
+          },
+          "403": {
+            "description": "`no-account`: The credential is in no Account the User belongs to. `accounts` lists where it can switch to. `license-closed`: The Account's HealthCheck License is Closed. `detail` gives the reason. `browser-handoff`: A person must finish this act in the browser: open `handoffUrl`.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "no-account",
+              "license-closed",
+              "browser-handoff"
+            ]
+          },
+          "404": {
+            "description": "`not-found`: No such record in this Account.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "not-found"
+            ]
+          },
+          "422": {
+            "description": "`validation`: The input was refused. `errors` lists fields for a body or query that does not bind; otherwise `detail` gives the rule.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "validation"
+            ]
+          },
+          "429": {
+            "description": "`rate-limited`: Over the per-User rate limit. `Retry-After` says when to try again.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "rate-limited"
+            ]
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{projectId}/url-checks": {
+      "post": {
+        "tags": [
+          "URL checks"
+        ],
+        "summary": "Create a URL check",
+        "description": "Adds a site to monitoring as the New Health Check page does. `name` and `url` are required. The URL must be absolute and its root domain a Verified Domain of the Account: add and verify it with `verified-domains.add` and `verified-domains.verify` first, or the call answers 422 on `url`. It creates the web-application Service and its check, runs the uptime and SSL checks now so the first datapoint exists, and queues the SSL Labs analysis. Answers 201 with the Service's id, name, and URL.",
+        "operationId": "projects.create-url-check",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiUrlCheckCreate"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiUrlCheckCreate"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiUrlCheckCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiUrlCheck"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`unauthorized`: No bearer, or an unknown, ended, or expired credential. `WWW-Authenticate` names the Protected Resource Metadata.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "unauthorized"
+            ]
+          },
+          "403": {
+            "description": "`no-account`: The credential is in no Account the User belongs to. `accounts` lists where it can switch to. `license-closed`: The Account's HealthCheck License is Closed. `detail` gives the reason. `browser-handoff`: A person must finish this act in the browser: open `handoffUrl`.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "no-account",
+              "license-closed",
+              "browser-handoff"
+            ]
+          },
+          "404": {
+            "description": "`not-found`: No such record in this Account.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "not-found"
+            ]
+          },
+          "422": {
+            "description": "`validation`: The input was refused. `errors` lists fields for a body or query that does not bind; otherwise `detail` gives the rule.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "validation"
+            ]
+          },
+          "429": {
+            "description": "`rate-limited`: Over the per-User rate limit. `Retry-After` says when to try again.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "rate-limited"
+            ]
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{projectId}/url-checks/{id}": {
+      "patch": {
+        "tags": [
+          "URL checks"
+        ],
+        "summary": "Edit a URL check",
+        "description": "Changes the name, the URL, or both, as the Health Check settings page does. A field left out keeps its value; a blank one answers 422. A URL that is given must be on a Verified Domain of the Account, or the call answers 422 on `url`. `id` is the Service's id. A Service that has no URL check, such as one an app reports, answers 404.",
+        "operationId": "projects.update-url-check",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiUrlCheckUpdate"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiUrlCheckUpdate"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiUrlCheckUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiUrlCheck"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`unauthorized`: No bearer, or an unknown, ended, or expired credential. `WWW-Authenticate` names the Protected Resource Metadata.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "unauthorized"
+            ]
+          },
+          "403": {
+            "description": "`no-account`: The credential is in no Account the User belongs to. `accounts` lists where it can switch to. `license-closed`: The Account's HealthCheck License is Closed. `detail` gives the reason. `browser-handoff`: A person must finish this act in the browser: open `handoffUrl`.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "no-account",
+              "license-closed",
+              "browser-handoff"
+            ]
+          },
+          "404": {
+            "description": "`not-found`: No such record in this Account.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "not-found"
+            ]
+          },
+          "422": {
+            "description": "`validation`: The input was refused. `errors` lists fields for a body or query that does not bind; otherwise `detail` gives the rule.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "validation"
+            ]
+          },
+          "429": {
+            "description": "`rate-limited`: Over the per-User rate limit. `Retry-After` says when to try again.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "rate-limited"
+            ]
+          }
         }
       }
     },
     "/api/v1/accounts": {
       "get": {
-        "tags": ["Accounts"],
-        "summary": "List Accounts",
-        "operationId": "accounts.list",
-        "parameters": [
-          { "name": "$top", "in": "query", "schema": { "type": ["integer", "string"], "pattern": "^-?(?:0|[1-9]\\d*)$" } }
+        "tags": [
+          "Accounts"
         ],
+        "summary": "List the User's Accounts",
+        "description": "Lists every Account the signed-in User belongs to, each with `current` true for the Account the credential acts in now. Works even when the current Account is unusable (no membership, a Closed License, no Legal Acceptance), so call it first when another call answers `no-account`.",
+        "operationId": "accounts.list",
         "responses": {
-          "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "object" } } } }
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiListOfApiAccountListItem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`unauthorized`: No bearer, or an unknown, ended, or expired credential. `WWW-Authenticate` names the Protected Resource Metadata.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "unauthorized"
+            ]
+          },
+          "429": {
+            "description": "`rate-limited`: Over the per-User rate limit. `Retry-After` says when to try again.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "rate-limited"
+            ]
+          }
         }
       }
     },
-    "/api/v1/accounts/{accountId}": {
-      "get": {
-        "tags": ["Accounts"],
-        "summary": "Get an Account",
-        "operationId": "accounts.get",
+    "/api/v1/accounts/{accountId}/switch": {
+      "post": {
+        "tags": [
+          "Accounts"
+        ],
+        "summary": "Switch the credential to another Account",
+        "description": "Moves the credential into the Account `accountId`, so every later call acts there until the next switch. Answers with the Account list, the new Account marked `current`. An Account the User is not in answers `not-found`.",
+        "operationId": "accounts.switch",
         "parameters": [
-          { "name": "accountId", "in": "path", "required": true, "schema": { "type": "integer" } }
+          {
+            "name": "accountId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int64"
+            }
+          }
         ],
         "responses": {
-          "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "object" } } } }
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiListOfApiAccountListItem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`unauthorized`: No bearer, or an unknown, ended, or expired credential. `WWW-Authenticate` names the Protected Resource Metadata.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "unauthorized"
+            ]
+          },
+          "404": {
+            "description": "`not-found`: No such record in this Account.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "not-found"
+            ]
+          },
+          "429": {
+            "description": "`rate-limited`: Over the per-User rate limit. `Retry-After` says when to try again.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "x-problem-types": [
+              "rate-limited"
+            ]
+          }
         }
       }
     }
   },
   "components": {
     "schemas": {
-      "RiskCreate": {
-        "type": "object",
-        "required": ["title"],
-        "properties": {
-          "title": { "type": ["null", "string"], "description": "A short name for the Risk." },
-          "status": { "enum": ["Open", "Accepted", "Closed"], "type": ["null", "string"] },
-          "likelihood": { "pattern": "^-?(?:0|[1-9]\\d*)$", "type": ["null", "integer", "string"], "format": "int32" },
-          "score": { "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$", "type": ["null", "number", "string"], "format": "double" },
-          "impact": { "enum": [1, 2, 3], "type": ["null", "integer"] },
-          "private": { "type": ["null", "boolean"] },
-          "ownerIds": { "type": ["null", "array"], "items": { "type": "string", "format": "uuid" } },
-          "collectedAt": { "type": ["null", "string"], "format": "date" },
-          "owner": { "oneOf": [{ "type": "null" }, { "$ref": "#/components/schemas/Owner" }] }
-        }
-      },
-      "RiskUpdate": {
+      "ApiAccount": {
+        "required": [
+          "id",
+          "name"
+        ],
         "type": "object",
         "properties": {
-          "title": { "type": ["null", "string"] },
-          "notify": { "type": ["null", "boolean"], "description": "Stored on the Risk." },
-          "out": { "type": ["null", "string"], "description": "The way out of the Risk." }
-        }
-      },
-      "Owner": {
-        "type": "object",
-        "properties": {
-          "kind": { "type": "string" },
-          "id": { "type": "string" }
-        }
-      },
-      "MessageSend": {
-        "type": "object",
-        "properties": {
-          "text": { "type": ["null", "string"] },
-          "uploadIds": {
-            "type": ["null", "array"],
-            "items": { "type": "string", "format": "uuid" },
-            "x-upload-target": "conversation"
+          "id": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
           }
         }
       },
-      "EvidenceCreate": {
+      "ApiAccountListItem": {
+        "required": [
+          "id",
+          "name",
+          "current"
+        ],
         "type": "object",
         "properties": {
-          "uploadId": { "type": ["null", "string"], "format": "uuid", "x-upload-target": "evidence" },
-          "title": { "type": ["null", "string"] }
+          "id": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          },
+          "current": {
+            "type": "boolean"
+          }
         }
+      },
+      "ApiEmailSettings": {
+        "required": [
+          "userId",
+          "email",
+          "availabilityChange",
+          "dnsChange",
+          "weeklyReport",
+          "smokeTestComplete"
+        ],
+        "type": "object",
+        "properties": {
+          "userId": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "email": {
+            "type": "string"
+          },
+          "availabilityChange": {
+            "type": "boolean"
+          },
+          "dnsChange": {
+            "type": "boolean"
+          },
+          "weeklyReport": {
+            "type": "boolean"
+          },
+          "smokeTestComplete": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ApiEmailSettingsAnswer": {
+        "required": [
+          "account",
+          "settings"
+        ],
+        "type": "object",
+        "properties": {
+          "account": {
+            "$ref": "#/components/schemas/ApiAccount"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/ApiEmailSettings"
+          }
+        }
+      },
+      "ApiEmailSettingsUpdate": {
+        "type": "object",
+        "properties": {
+          "availabilityChange": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "dnsChange": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "weeklyReport": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "smokeTestComplete": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          }
+        }
+      },
+      "ApiIgnoredUrls": {
+        "required": [
+          "account",
+          "smokeTestId",
+          "ignoredUrls"
+        ],
+        "type": "object",
+        "properties": {
+          "account": {
+            "$ref": "#/components/schemas/ApiAccount"
+          },
+          "smokeTestId": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "ignoredUrls": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "ApiInputField": {
+        "required": [
+          "name",
+          "type",
+          "value",
+          "isSet",
+          "options"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "value": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "isSet": {
+            "type": "boolean"
+          },
+          "options": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ApiInputOption"
+            }
+          }
+        }
+      },
+      "ApiInputFieldWrite": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "value": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "options": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ApiInputOption"
+            }
+          }
+        }
+      },
+      "ApiInputOption": {
+        "required": [
+          "value",
+          "label"
+        ],
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string"
+          },
+          "label": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "ApiListOfApiAccountListItem": {
+        "required": [
+          "account",
+          "items",
+          "total",
+          "nextOffset"
+        ],
+        "type": "object",
+        "properties": {
+          "account": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ApiAccount"
+              }
+            ]
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiAccountListItem"
+            }
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "nextOffset": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "ApiPagedListOfApiRunPageRow": {
+        "required": [
+          "account",
+          "items",
+          "page",
+          "pageSize",
+          "totalCount"
+        ],
+        "type": "object",
+        "properties": {
+          "account": {
+            "$ref": "#/components/schemas/ApiAccount"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiRunPageRow"
+            }
+          },
+          "page": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pageSize": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "totalCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "ApiProject": {
+        "required": [
+          "id",
+          "name",
+          "statusPageSlug"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          },
+          "statusPageSlug": {
+            "type": "string"
+          }
+        }
+      },
+      "ApiProjectCreate": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "ApiProjectDetail": {
+        "required": [
+          "account",
+          "id",
+          "name",
+          "statusPageSlug"
+        ],
+        "type": "object",
+        "properties": {
+          "account": {
+            "$ref": "#/components/schemas/ApiAccount"
+          },
+          "id": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          },
+          "statusPageSlug": {
+            "type": "string"
+          }
+        }
+      },
+      "ApiProjectList": {
+        "required": [
+          "account",
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "account": {
+            "$ref": "#/components/schemas/ApiAccount"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiProject"
+            }
+          }
+        }
+      },
+      "ApiProjectUpdate": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "ApiRunPageRow": {
+        "required": [
+          "id",
+          "url",
+          "statusCode",
+          "loadTimeMs",
+          "errorCount",
+          "warningCount",
+          "ignored"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "url": {
+            "type": "string"
+          },
+          "statusCode": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "loadTimeMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "errorCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "warningCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "ignored": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ApiSmokeTestInputCreate": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "fields": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ApiInputFieldWrite"
+            }
+          }
+        }
+      },
+      "ApiSmokeTestInputDetail": {
+        "required": [
+          "account",
+          "id",
+          "smokeTestId",
+          "url",
+          "fields"
+        ],
+        "type": "object",
+        "properties": {
+          "account": {
+            "$ref": "#/components/schemas/ApiAccount"
+          },
+          "id": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "smokeTestId": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "url": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiInputField"
+            }
+          }
+        }
+      },
+      "ApiUrlCheck": {
+        "required": [
+          "account",
+          "id",
+          "projectId",
+          "name",
+          "url"
+        ],
+        "type": "object",
+        "properties": {
+          "account": {
+            "$ref": "#/components/schemas/ApiAccount"
+          },
+          "id": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "projectId": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      },
+      "ApiUrlCheckCreate": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "url": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "ApiUrlCheckUpdate": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "url": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "DynamicTableSortDirection": {
+        "type": "integer"
+      },
+      "ErrorFilter": {
+        "type": "integer"
+      },
+      "IgnoreFilter": {
+        "type": "integer"
+      },
+      "Problem": {
+        "required": [
+          "type",
+          "title",
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "type": {
+            "enum": [
+              "unauthorized",
+              "allowance-exhausted",
+              "no-account",
+              "license-closed",
+              "browser-handoff",
+              "forbidden",
+              "not-found",
+              "conflict",
+              "validation",
+              "rate-limited"
+            ],
+            "type": "string",
+            "description": "The stable problem token. An unexpected failure (500) answers `about:blank`."
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "account": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "format": "int64"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "description": "The Account acted in, when known."
+          },
+          "accounts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "name": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "`no-account` only: the Accounts the credential can switch to."
+          },
+          "handoffUrl": {
+            "type": "string",
+            "description": "`browser-handoff` only: the page where a person finishes the act.",
+            "format": "uri"
+          },
+          "errors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "description": "`validation` only, for a body that does not bind: messages by camelCase field."
+          }
+        },
+        "description": "ProblemDetails (RFC 9457). Branch on `type`; `title` and `detail` are in the User's UI language."
+      },
+      "Stream": {
+        "type": "string",
+        "format": "binary"
+      }
+    },
+    "securitySchemes": {
+      "agentConnection": {
+        "type": "oauth2",
+        "description": "An Agent connection: OAuth 2 authorization code with PKCE at Auth, for the resource `http://localhost:13003/api`. No consent step beyond the sign-in itself.",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "https://auth.mvdm.io/connect/authorize",
+            "tokenUrl": "https://auth.mvdm.io/connect/token",
+            "refreshUrl": "https://auth.mvdm.io/connect/token",
+            "scopes": {}
+          }
+        }
+      },
+      "personalToken": {
+        "type": "http",
+        "description": "A Personal token (`mvdm_pat_\u2026`), created on API & Agent Access on Auth.",
+        "scheme": "bearer"
       }
     }
-  }
+  },
+  "security": [
+    {
+      "agentConnection": []
+    },
+    {
+      "personalToken": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Accounts"
+    },
+    {
+      "name": "Projects"
+    },
+    {
+      "name": "Smoke Test Inputs"
+    },
+    {
+      "name": "Smoke Test Runs"
+    },
+    {
+      "name": "Smoke Tests"
+    },
+    {
+      "name": "URL checks"
+    }
+  ]
 }
